@@ -1,0 +1,421 @@
+/* =========================================================================
+   Design tokens
+   ========================================================================= */
+:root {
+	--bg: #eef7fb;
+	--bg-soft: rgba(226, 240, 245, 0.75);
+	--fg: #0f2329;
+	--fg-soft: #2b464f;
+	--muted: #58717a;
+	--border: rgba(15, 35, 41, 0.12);
+	--accent: #0f766e;
+	--accent-2: #c2410c;
+	--accent-soft: rgba(15, 118, 110, 0.1);
+	--code-bg: rgba(226, 240, 245, 0.9);
+	--shadow: 0 1px 2px rgba(8, 47, 73, 0.05), 0 12px 40px rgba(8, 47, 73, 0.1);
+
+	/* Brand gradient (avatar, interest icons). */
+	--brand-1: #14b8a6;
+	--brand-2: #0ea5e9;
+	--brand-3: #f59e0b;
+	--brand-glow: rgba(20, 184, 166, 0.4);
+
+	/* "Paper" surfaces floating over the animated sea. */
+	--surface: rgba(255, 255, 255, 0.7);
+	--surface-strong: rgba(255, 255, 255, 0.86);
+	--surface-border: rgba(255, 255, 255, 0.8);
+	--blur: blur(16px) saturate(150%);
+
+	/* Background fallback colors (see OceanBackground.astro). */
+	--sky-top: #a9d8f5;
+	--sky-mid: #e4f3fc;
+	--sky-horizon: #ffe2bf;
+	--sea: #62c3bb;
+	--sea-deep: #137377;
+	--grain-opacity: 0.03;
+	--vignette: rgba(238, 247, 251, 0.35);
+
+	/* Type */
+	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+		'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+	--font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia,
+		'Noto Serif', 'Source Han Serif SC', 'Noto Serif CJK SC', 'Songti SC', 'SimSun', serif;
+	--font-mono: ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace;
+
+	/* Layout */
+	--sidebar: 16rem;
+	--measure: 44rem;
+	--radius: 4px;
+	color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+	--bg: #020617;
+	--bg-soft: rgba(255, 255, 255, 0.05);
+	--fg: #e8f3f5;
+	--fg-soft: #c3d6db;
+	--muted: #8aa3ab;
+	--border: rgba(255, 255, 255, 0.11);
+	--accent: #5eead4;
+	--accent-2: #fbbf24;
+	--accent-soft: rgba(94, 234, 212, 0.12);
+	--code-bg: rgba(255, 255, 255, 0.06);
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 40px rgba(0, 0, 0, 0.45);
+
+	--brand-glow: rgba(45, 212, 191, 0.45);
+
+	--surface: rgba(3, 14, 26, 0.68);
+	--surface-strong: rgba(3, 14, 26, 0.86);
+	--surface-border: rgba(255, 255, 255, 0.08);
+
+	--sky-top: #020617;
+	--sky-mid: #071a33;
+	--sky-horizon: #0f3b4a;
+	--sea: #0a2d45;
+	--sea-deep: #041426;
+	--grain-opacity: 0.05;
+	--vignette: rgba(1, 4, 12, 0.6);
+	color-scheme: dark;
+}
+
+/* =========================================================================
+   Base
+   ========================================================================= */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	scroll-padding-top: 5rem;
+}
+
+body {
+	margin: 0;
+	min-height: 100vh;
+	background: var(--bg);
+	color: var(--fg);
+	font-family: var(--font-sans);
+	font-size: 1rem;
+	line-height: 1.65;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+}
+
+a {
+	color: var(--accent);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.22em;
+}
+a:hover {
+	text-decoration-thickness: 2px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	font-family: var(--font-serif);
+	font-weight: 600;
+	line-height: 1.2;
+	color: var(--fg);
+}
+
+img {
+	max-width: 100%;
+	height: auto;
+}
+
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.muted {
+	color: var(--muted);
+}
+
+.mono {
+	font-family: var(--font-mono);
+	font-size: 0.82em;
+	letter-spacing: 0.01em;
+}
+
+/* Small monospace label above titles, e.g. "02 — Writing". */
+.eyebrow {
+	margin: 0 0 0.6rem;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--accent);
+}
+
+.gradient-text {
+	background: linear-gradient(100deg, var(--accent) 0%, var(--brand-2) 55%, var(--accent-2) 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* =========================================================================
+   Surfaces & page scaffolding
+   ========================================================================= */
+.sheet {
+	background: var(--surface);
+	border: 1px solid var(--surface-border);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow);
+	-webkit-backdrop-filter: var(--blur);
+	backdrop-filter: var(--blur);
+	padding: 3rem 3.25rem 3.25rem;
+}
+@media (max-width: 640px) {
+	.sheet {
+		padding: 1.75rem 1.25rem 2rem;
+	}
+}
+
+.page-head {
+	margin-bottom: 2.25rem;
+	padding-bottom: 1.5rem;
+	border-bottom: 1px solid var(--border);
+}
+.page-title {
+	margin: 0;
+	font-size: clamp(2rem, 5vw, 2.75rem);
+	letter-spacing: -0.01em;
+}
+.page-lede {
+	margin: 0.6rem 0 0;
+	font-family: var(--font-serif);
+	font-style: italic;
+	font-size: 1.15rem;
+	color: var(--muted);
+}
+
+.empty {
+	margin: 0;
+	font-family: var(--font-serif);
+	font-style: italic;
+	font-size: 1.1rem;
+	color: var(--muted);
+}
+
+/* Topic links render as "#tag" in monospace (no pills). */
+.tag {
+	font-family: var(--font-mono);
+	font-size: 0.78rem;
+	color: var(--accent);
+	text-decoration: none;
+	white-space: nowrap;
+}
+.tag::before {
+	content: '#';
+	opacity: 0.6;
+}
+.tag:hover {
+	text-decoration: underline;
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.7rem 1.2rem;
+	border: 1px solid var(--accent);
+	border-radius: var(--radius);
+	background: var(--accent);
+	color: var(--bg);
+	font-size: 0.95rem;
+	font-weight: 600;
+	text-decoration: none;
+	transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+.btn:hover {
+	transform: translateY(-2px);
+}
+.btn.ghost {
+	background: var(--surface);
+	color: var(--fg);
+	border-color: var(--border);
+	-webkit-backdrop-filter: var(--blur);
+	backdrop-filter: var(--blur);
+}
+.btn.ghost:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+/* =========================================================================
+   Article typography (serif, editorial)
+   ========================================================================= */
+.prose {
+	font-family: var(--font-serif);
+	font-size: 1.125rem;
+	line-height: 1.8;
+	color: var(--fg-soft);
+	overflow-wrap: break-word;
+}
+.prose > :first-child {
+	margin-top: 0;
+}
+.prose h2 {
+	font-size: 1.6rem;
+	margin: 2.6rem 0 0.8rem;
+}
+.prose h2::before {
+	content: '§ ';
+	color: var(--accent);
+	font-weight: 400;
+}
+.prose h3 {
+	font-size: 1.25rem;
+	margin: 2rem 0 0.6rem;
+}
+.prose h4 {
+	font-size: 1.05rem;
+	margin: 1.6rem 0 0.5rem;
+}
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote,
+.prose table,
+.prose pre {
+	margin: 0 0 1.25rem;
+}
+.prose li + li {
+	margin-top: 0.3rem;
+}
+.prose li::marker {
+	color: var(--accent);
+}
+.prose blockquote {
+	margin-left: 0;
+	padding: 0.1rem 0 0.1rem 1.25rem;
+	border-left: 2px solid var(--accent-2);
+	font-style: italic;
+	font-size: 1.2rem;
+	color: var(--fg);
+}
+.prose blockquote p {
+	margin: 0.5rem 0;
+}
+.prose hr {
+	border: 0;
+	text-align: center;
+	margin: 2.5rem 0;
+}
+.prose hr::after {
+	content: '~ ~ ~';
+	color: var(--muted);
+	letter-spacing: 0.5em;
+}
+.prose img {
+	display: block;
+	margin: 1.75rem auto;
+	border-radius: var(--radius);
+}
+.prose table {
+	display: block;
+	overflow-x: auto;
+	border-collapse: collapse;
+	font-family: var(--font-sans);
+	font-size: 0.92rem;
+}
+.prose th,
+.prose td {
+	border-bottom: 1px solid var(--border);
+	padding: 0.5rem 0.9rem;
+	text-align: left;
+}
+.prose th {
+	font-family: var(--font-mono);
+	font-size: 0.78rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--muted);
+}
+.prose :not(pre) > code {
+	font-family: var(--font-mono);
+	font-size: 0.85em;
+	padding: 0.1em 0.35em;
+	border-radius: 3px;
+	background: var(--code-bg);
+}
+.prose pre {
+	font-family: var(--font-mono);
+	font-size: 0.86rem;
+	line-height: 1.6;
+	padding: 1.1rem 1.2rem;
+	border-radius: var(--radius);
+	border-left: 3px solid var(--accent);
+	overflow-x: auto;
+	tab-size: 4;
+}
+.prose pre code {
+	font-family: inherit;
+}
+
+/* Shiki dual-theme: use the dark token colors in dark mode. */
+:root[data-theme='dark'] .astro-code,
+:root[data-theme='dark'] .astro-code span {
+	color: var(--shiki-dark) !important;
+	background-color: var(--shiki-dark-bg) !important;
+	font-style: var(--shiki-dark-font-style) !important;
+	font-weight: var(--shiki-dark-font-weight) !important;
+	text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+/* Copy-to-clipboard button added to code blocks by PostLayout. */
+.code-block {
+	position: relative;
+}
+.code-block .copy-btn {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	padding: 0.15rem 0.55rem;
+	font: 0.72rem var(--font-mono);
+	color: var(--muted);
+	background: var(--bg);
+	border: 1px solid var(--border);
+	border-radius: 3px;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+.code-block:hover .copy-btn,
+.code-block .copy-btn:focus-visible {
+	opacity: 1;
+}
+@media (hover: none) {
+	.code-block .copy-btn {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

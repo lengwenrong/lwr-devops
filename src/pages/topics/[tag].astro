@@ -1,0 +1,43 @@
+---
+import type { GetStaticPaths } from 'astro';
+import PostList from '../../components/PostList.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPosts, getTags, type Post, tagSlug } from '../../utils/posts';
+
+export const getStaticPaths = (async () => {
+	const posts = await getPosts();
+	return getTags(posts).map((tag) => ({
+		params: { tag: tag.slug },
+		props: {
+			name: tag.name,
+			posts: posts.filter((p) => p.data.tags.some((t) => tagSlug(t) === tag.slug)),
+		},
+	}));
+}) satisfies GetStaticPaths;
+
+interface Props {
+	name: string;
+	posts: Post[];
+}
+
+const { name, posts } = Astro.props;
+---
+
+<BaseLayout title={`Topic: ${name}`} description={`Posts about ${name}.`}>
+	<header class="page-head">
+		<p class="eyebrow"><a href="/topics/">Topics</a> / {name}</p>
+		<h1 class="page-title">#{name}</h1>
+		<p class="page-lede">{posts.length} {posts.length === 1 ? 'piece' : 'pieces'} on this topic.</p>
+	</header>
+	<PostList posts={posts} />
+</BaseLayout>
+
+<style>
+	.eyebrow a {
+		color: inherit;
+		text-decoration: none;
+	}
+	.eyebrow a:hover {
+		text-decoration: underline;
+	}
+</style>

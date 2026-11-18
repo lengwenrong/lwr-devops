@@ -1,0 +1,302 @@
+---
+/**
+ * Site navigation. Desktop: fixed column on the left. Mobile: compact top bar with a dropdown menu.
+ */
+import { NAV_LINKS, SITE, SOCIAL_LINKS } from '../config';
+import { PROFILE } from '../data/profile';
+import Icon from './Icon.astro';
+import ThemeToggle from './ThemeToggle.astro';
+
+const path = Astro.url.pathname;
+const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+const initials = PROFILE.name
+	.split(/\s+/)
+	.filter(Boolean)
+	.slice(0, 2)
+	.map((w) => [...w][0])
+	.join('')
+	.toUpperCase();
+const year = new Date().getFullYear();
+---
+
+<aside class="sidebar" id="sidebar">
+	<a class="brand" href="/">
+		<span class="mark">
+			{PROFILE.avatar ? <img src={PROFILE.avatar} alt="" width="44" height="44" /> : initials}
+		</span>
+		<span class="brand-text">
+			<strong>{SITE.title}</strong>
+			<small>{PROFILE.name}</small>
+		</span>
+	</a>
+
+	<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar-panel">
+		<span class="bars" aria-hidden="true"><span></span><span></span></span>
+		<span class="menu-label">Menu</span>
+	</button>
+
+	<div class="panel" id="sidebar-panel">
+		<nav aria-label="Main">
+			<ol>
+				{
+					NAV_LINKS.map((link, i) => (
+						<li>
+							<a href={link.href} aria-current={isActive(link.href) ? 'page' : undefined}>
+								<span class="num">{String(i + 1).padStart(2, '0')}</span>
+								{link.label}
+							</a>
+						</li>
+					))
+				}
+			</ol>
+		</nav>
+
+		<div class="foot">
+			<ThemeToggle />
+			{
+				SOCIAL_LINKS.length > 0 && (
+					<ul class="social">
+						{SOCIAL_LINKS.map((link) => (
+							<li>
+								<a href={link.href} aria-label={link.label} title={link.label}>
+									<Icon name={link.icon} size={16} />
+								</a>
+							</li>
+						))}
+					</ul>
+				)
+			}
+			<p class="copy">&copy; {year} {PROFILE.name}</p>
+		</div>
+	</div>
+</aside>
+
+<style>
+	.sidebar {
+		position: fixed;
+		inset: 0 auto 0 0;
+		z-index: 20;
+		display: flex;
+		flex-direction: column;
+		width: var(--sidebar);
+		padding: 2rem 1.4rem 1.5rem;
+		overflow-y: auto;
+		background: var(--surface);
+		border-right: 1px solid var(--surface-border);
+		-webkit-backdrop-filter: var(--blur);
+		backdrop-filter: var(--blur);
+	}
+
+	/* ---- Brand ---- */
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 0.8rem;
+		color: var(--fg);
+		text-decoration: none;
+	}
+	.mark {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		overflow: hidden;
+		border-radius: 10px;
+		background: linear-gradient(135deg, var(--brand-1), var(--brand-2) 60%, var(--brand-3));
+		box-shadow: 0 6px 18px var(--brand-glow);
+		color: #fff;
+		font: 700 1rem var(--font-mono);
+	}
+	.mark img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.brand-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		line-height: 1.25;
+	}
+	.brand-text strong {
+		font: 600 1.2rem var(--font-serif);
+	}
+	.brand-text small {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font: 0.72rem var(--font-mono);
+		color: var(--muted);
+	}
+
+	/* ---- Panel (nav + footer) ---- */
+	.panel {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+	}
+	nav {
+		margin-top: 2.75rem;
+	}
+	ol {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	nav a {
+		display: flex;
+		align-items: baseline;
+		gap: 0.9rem;
+		padding: 0.55rem 0.75rem;
+		border-left: 2px solid transparent;
+		color: var(--fg-soft);
+		font-size: 1rem;
+		text-decoration: none;
+		transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+	}
+	nav a:hover {
+		color: var(--fg);
+		background: var(--accent-soft);
+	}
+	nav a[aria-current='page'] {
+		color: var(--fg);
+		font-weight: 600;
+		border-left-color: var(--accent);
+		background: var(--accent-soft);
+	}
+	.num {
+		font: 0.7rem var(--font-mono);
+		color: var(--accent);
+	}
+
+	.foot {
+		margin-top: auto;
+		padding-top: 2rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.9rem;
+	}
+	.social {
+		display: flex;
+		gap: 0.5rem;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.social a {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		color: var(--muted);
+	}
+	.social a:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+	.copy {
+		margin: 0;
+		font: 0.7rem var(--font-mono);
+		color: var(--muted);
+	}
+
+	.menu-btn {
+		display: none;
+	}
+
+	/* ---- Mobile: top bar + dropdown ---- */
+	@media (max-width: 900px) {
+		.sidebar {
+			position: sticky;
+			top: 0;
+			inset: auto;
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: center;
+			width: auto;
+			padding: 0.7rem 1rem;
+			overflow: visible;
+			border-right: 0;
+			border-bottom: 1px solid var(--surface-border);
+		}
+		.mark {
+			width: 2.25rem;
+			height: 2.25rem;
+			border-radius: 8px;
+			font-size: 0.85rem;
+		}
+		.brand-text small {
+			display: none;
+		}
+		.menu-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.55rem;
+			margin-left: auto;
+			padding: 0.45rem 0.7rem;
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			background: none;
+			color: var(--fg);
+			font: 0.78rem var(--font-mono);
+			cursor: pointer;
+		}
+		.bars {
+			display: grid;
+			gap: 4px;
+			width: 16px;
+		}
+		.bars span {
+			height: 2px;
+			background: currentColor;
+			transition: transform 0.2s ease;
+		}
+		.sidebar[data-open] .bars span:first-child {
+			transform: translateY(3px) rotate(45deg);
+		}
+		.sidebar[data-open] .bars span:last-child {
+			transform: translateY(-3px) rotate(-45deg);
+		}
+		.panel {
+			display: none;
+			flex-basis: 100%;
+			padding-bottom: 0.5rem;
+		}
+		.sidebar[data-open] .panel {
+			display: flex;
+		}
+		nav {
+			margin-top: 1rem;
+		}
+		.foot {
+			margin-top: 1rem;
+			padding-top: 1rem;
+			border-top: 1px solid var(--border);
+		}
+	}
+</style>
+
+<script>
+	const sidebar = document.getElementById('sidebar')!;
+	const button = sidebar.querySelector<HTMLButtonElement>('.menu-btn')!;
+	const label = button.querySelector('.menu-label')!;
+
+	function setOpen(open: boolean) {
+		sidebar.toggleAttribute('data-open', open);
+		button.setAttribute('aria-expanded', String(open));
+		label.textContent = open ? 'Close' : 'Menu';
+	}
+
+	button.addEventListener('click', () => setOpen(!sidebar.hasAttribute('data-open')));
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' && sidebar.hasAttribute('data-open')) {
+			setOpen(false);
+			button.focus();
+		}
+	});
+	// Close when the layout switches back to desktop.
+	window.matchMedia('(min-width: 901px)').addEventListener('change', (e) => e.matches && setOpen(false));
+</script>

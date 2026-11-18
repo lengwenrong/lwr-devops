@@ -1,0 +1,360 @@
+---
+import type { MarkdownHeading } from 'astro';
+import { Image } from 'astro:assets';
+import FormattedDate from '../components/FormattedDate.astro';
+import { type Post, postUrl, readingTime, tagUrl } from '../utils/posts';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+	post: Post;
+	headings: MarkdownHeading[];
+	prev?: Post;
+	next?: Post;
+}
+
+const { post, headings, prev, next } = Astro.props;
+const { title, description, pubDate, updatedDate, tags, cover, coverAlt, draft } = post.data;
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const showToc = toc.length >= 3;
+---
+
+<BaseLayout
+	bare
+	title={title}
+	description={description}
+	image={cover?.src}
+	type="article"
+	publishedTime={pubDate}
+	modifiedTime={updatedDate}
+	noindex={draft}
+>
+	<div class:list={['post-grid', { 'has-toc': showToc }]}>
+		<article class="sheet post">
+			<header class="post-head">
+				<p class="eyebrow">
+					<a href="/writing/">Writing</a> / {pubDate.getUTCFullYear()}
+				</p>
+				{draft && <p class="draft-banner mono">draft — not included in production builds</p>}
+				<h1>{title}</h1>
+				<p class="standfirst">{description}</p>
+				<p class="meta mono">
+					<FormattedDate date={pubDate} />
+					<span aria-hidden="true">/</span>
+					<span>{readingTime(post.body)} min read</span>
+					{
+						updatedDate && (
+							<>
+								<span aria-hidden="true">/</span>
+								<span>
+									updated <FormattedDate date={updatedDate} />
+								</span>
+							</>
+						)
+					}
+				</p>
+				{
+					tags.length > 0 && (
+						<p class="tags">
+							{tags.map((tag) => (
+								<a class="tag" href={tagUrl(tag)}>
+									{tag}
+								</a>
+							))}
+						</p>
+					)
+				}
+			</header>
+
+			{
+				cover && (
+					<Image
+						class="cover"
+						src={cover}
+						alt={coverAlt}
+						widths={[720, 1440]}
+						sizes="(max-width: 900px) 100vw, 704px"
+						loading="eager"
+					/>
+				)
+			}
+
+			{
+				showToc && (
+					<details class="toc-inline">
+						<summary class="mono">On this page</summary>
+						<ol>
+							{toc.map((h) => (
+								<li class={`d${h.depth}`}>
+									<a href={`#${h.slug}`}>{h.text}</a>
+								</li>
+							))}
+						</ol>
+					</details>
+				)
+			}
+
+			<div class="prose">
+				<slot />
+			</div>
+
+			{
+				(prev || next) && (
+					<nav class="post-nav" aria-label="More writing">
+						{prev ? (
+							<a href={postUrl(prev)} rel="prev">
+								<span class="mono">← older</span>
+								<span class="t">{prev.data.title}</span>
+							</a>
+						) : (
+							<span />
+						)}
+						{next ? (
+							<a href={postUrl(next)} rel="next" class="next">
+								<span class="mono">newer →</span>
+								<span class="t">{next.data.title}</span>
+							</a>
+						) : (
+							<span />
+						)}
+					</nav>
+				)
+			}
+		</article>
+
+		{
+			showToc && (
+				<nav class="toc-rail sheet" aria-label="On this page">
+					<p class="eyebrow">On this page</p>
+					<ol>
+						{toc.map((h) => (
+							<li class={`d${h.depth}`}>
+								<a href={`#${h.slug}`}>{h.text}</a>
+							</li>
+						))}
+					</ol>
+				</nav>
+			)
+		}
+	</div>
+</BaseLayout>
+
+<style>
+	.post-grid {
+		display: grid;
+		grid-template-columns: minmax(0, var(--measure));
+		gap: 2rem;
+		align-items: start;
+	}
+	.post-grid.has-toc {
+		grid-template-columns: minmax(0, var(--measure)) 15rem;
+	}
+
+	.post-head {
+		margin-bottom: 2rem;
+		padding-bottom: 1.5rem;
+		border-bottom: 1px solid var(--border);
+	}
+	.eyebrow a {
+		color: inherit;
+		text-decoration: none;
+	}
+	.eyebrow a:hover {
+		text-decoration: underline;
+	}
+	h1 {
+		margin: 0;
+		font-size: clamp(2rem, 5vw, 3rem);
+		letter-spacing: -0.015em;
+	}
+	.standfirst {
+		margin: 0.8rem 0 1rem;
+		font-family: var(--font-serif);
+		font-style: italic;
+		font-size: 1.2rem;
+		color: var(--fg-soft);
+	}
+	.meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin: 0 0 0.6rem;
+		color: var(--muted);
+	}
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem 0.9rem;
+		margin: 0;
+	}
+	.draft-banner {
+		display: inline-block;
+		margin: 0 0 0.8rem;
+		padding: 0.15rem 0.5rem;
+		border: 1px solid var(--accent-2);
+		color: var(--accent-2);
+	}
+	.cover {
+		display: block;
+		width: 100%;
+		height: auto;
+		margin: 0 0 2rem;
+		border-radius: var(--radius);
+	}
+
+	/* ---- Table of contents ---- */
+	.toc-rail {
+		position: sticky;
+		top: 2rem;
+		padding: 1.25rem 1.25rem 1.25rem 1rem;
+	}
+	.toc-rail ol,
+	.toc-inline ol {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.toc-rail a,
+	.toc-inline a {
+		display: block;
+		padding: 0.3rem 0 0.3rem 0.75rem;
+		border-left: 2px solid var(--border);
+		color: var(--muted);
+		font-size: 0.88rem;
+		line-height: 1.4;
+		text-decoration: none;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+	.toc-rail .d3 a,
+	.toc-inline .d3 a {
+		padding-left: 1.5rem;
+	}
+	.toc-rail a:hover,
+	.toc-inline a:hover {
+		color: var(--fg);
+	}
+	.toc-rail a.active {
+		color: var(--accent);
+		border-left-color: var(--accent);
+	}
+	.toc-inline {
+		display: none;
+		margin: 0 0 2rem;
+		padding: 0.8rem 1rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+	}
+	.toc-inline summary {
+		cursor: pointer;
+		color: var(--accent);
+	}
+	.toc-inline ol {
+		margin-top: 0.6rem;
+	}
+
+	@media (max-width: 1240px) {
+		.post-grid.has-toc {
+			grid-template-columns: minmax(0, var(--measure));
+		}
+		.toc-rail {
+			display: none;
+		}
+		.toc-inline {
+			display: block;
+		}
+	}
+
+	/* ---- Older / newer ---- */
+	.post-nav {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+		margin-top: 3rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--border);
+	}
+	.post-nav a {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		text-decoration: none;
+	}
+	.post-nav .next {
+		text-align: right;
+	}
+	.post-nav .mono {
+		color: var(--accent);
+	}
+	.post-nav .t {
+		color: var(--fg);
+		font: 600 1.05rem var(--font-serif);
+	}
+	.post-nav a:hover .t {
+		color: var(--accent);
+	}
+	@media (max-width: 560px) {
+		.post-nav {
+			grid-template-columns: 1fr;
+		}
+		.post-nav .next {
+			text-align: left;
+		}
+	}
+</style>
+
+<script>
+	// Copy buttons on code blocks.
+	document.querySelectorAll<HTMLPreElement>('.prose pre').forEach((pre) => {
+		const wrapper = document.createElement('div');
+		wrapper.className = 'code-block';
+		pre.parentNode?.insertBefore(wrapper, pre);
+		wrapper.appendChild(pre);
+
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'copy-btn';
+		button.textContent = 'copy';
+		button.setAttribute('aria-label', 'Copy code to clipboard');
+		button.addEventListener('click', async () => {
+			const code = pre.querySelector('code')?.innerText ?? pre.innerText;
+			try {
+				await navigator.clipboard.writeText(code);
+				button.textContent = 'copied';
+			} catch {
+				button.textContent = 'failed';
+			}
+			setTimeout(() => (button.textContent = 'copy'), 1500);
+		});
+		wrapper.appendChild(button);
+	});
+
+	// Highlight the section currently being read in the sticky contents column.
+	// Active = the last heading above the top 30% of the screen; the final heading once the
+	// page is scrolled to the bottom (it may never reach the top on short final sections).
+	const links = [...document.querySelectorAll<HTMLAnchorElement>('.toc-rail a')];
+	const headings = links
+		.map((a) => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+		.filter((h): h is HTMLElement => h !== null);
+	if (links.length && headings.length === links.length) {
+		let ticking = false;
+		const update = () => {
+			ticking = false;
+			const atBottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+			let active = -1;
+			if (atBottom) active = headings.length - 1;
+			else headings.forEach((h, i) => h.getBoundingClientRect().top < innerHeight * 0.3 && (active = i));
+			links.forEach((a, i) => a.classList.toggle('active', i === active));
+		};
+		window.addEventListener(
+			'scroll',
+			() => {
+				if (!ticking) {
+					ticking = true;
+					requestAnimationFrame(update);
+				}
+			},
+			{ passive: true },
+		);
+		window.addEventListener('resize', update);
+		update();
+	}
+</script>

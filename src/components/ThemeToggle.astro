@@ -1,0 +1,96 @@
+<button id="theme-toggle" class="theme-switch" type="button" role="switch" aria-checked="false">
+	<span class="track" aria-hidden="true">
+		<span class="knob">
+			<svg class="sun" viewBox="0 0 24 24" width="12" height="12">
+				<circle cx="12" cy="12" r="5" fill="currentColor"></circle>
+			</svg>
+			<svg class="moon" viewBox="0 0 24 24" width="12" height="12">
+				<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z" fill="currentColor"></path>
+			</svg>
+		</span>
+	</span>
+	<span class="label">Dark mode</span>
+</button>
+
+<style>
+	.theme-switch {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.65rem;
+		padding: 0.35rem 0;
+		border: 0;
+		background: none;
+		color: var(--muted);
+		font: 0.78rem var(--font-mono);
+		letter-spacing: 0.04em;
+		cursor: pointer;
+	}
+	.theme-switch:hover {
+		color: var(--fg);
+	}
+	.track {
+		position: relative;
+		width: 2.4rem;
+		height: 1.3rem;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--accent-soft);
+		transition: background-color 0.25s ease;
+	}
+	.knob {
+		position: absolute;
+		top: 1px;
+		left: 1px;
+		display: grid;
+		place-items: center;
+		width: calc(1.3rem - 4px);
+		height: calc(1.3rem - 4px);
+		border-radius: 50%;
+		background: var(--accent);
+		color: var(--bg);
+		transition: transform 0.25s ease;
+	}
+	.moon {
+		display: none;
+	}
+	:global(:root[data-theme='dark']) .knob {
+		transform: translateX(1.1rem);
+	}
+	:global(:root[data-theme='dark']) .sun {
+		display: none;
+	}
+	:global(:root[data-theme='dark']) .moon {
+		display: block;
+	}
+</style>
+
+<script>
+	const root = document.documentElement;
+	const button = document.getElementById('theme-toggle')!;
+
+	const sync = () => button.setAttribute('aria-checked', String(root.dataset.theme === 'dark'));
+	sync();
+
+	button.addEventListener('click', () => {
+		const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+		root.setAttribute('data-theme', next);
+		try {
+			localStorage.setItem('theme', next);
+		} catch {
+			/* storage unavailable: theme still applies for this page */
+		}
+		sync();
+	});
+
+	// Follow OS changes until the visitor picks a theme explicitly.
+	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+		let stored: string | null = null;
+		try {
+			stored = localStorage.getItem('theme');
+		} catch {}
+		if (!stored) {
+			root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+			sync();
+		}
+	});
+</script>

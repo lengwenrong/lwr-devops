@@ -1,0 +1,73 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPosts, getTags } from '../../utils/posts';
+
+const topics = getTags(await getPosts()).sort((a, b) => a.name.localeCompare(b.name));
+---
+
+<BaseLayout title="Topics" description="Every topic, A to Z.">
+	<header class="page-head">
+		<p class="eyebrow">03 — Topics</p>
+		<h1 class="page-title">Topics</h1>
+		<p class="page-lede">An index of everything I've written about, A to Z.</p>
+	</header>
+
+	{
+		topics.length > 0 ? (
+			<ul class="index">
+				{topics.map((t) => (
+					<li>
+						<a href={`/topics/${t.slug}/`}>
+							<span class="name">{t.name}</span>
+							<span class="leader" aria-hidden="true" />
+							<span class="n mono">{t.count}</span>
+						</a>
+					</li>
+				))}
+			</ul>
+		) : (
+			<p class="empty">No topics yet — they appear once posts are tagged.</p>
+		)
+	}
+</BaseLayout>
+
+<style>
+	/* Book-index style: name ........ count */
+	.index {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		columns: 2;
+		column-gap: 3rem;
+	}
+	.index li {
+		break-inside: avoid;
+	}
+	.index a {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		padding: 0.4rem 0;
+		color: var(--fg);
+		font-family: var(--font-serif);
+		font-size: 1.1rem;
+		text-decoration: none;
+	}
+	.leader {
+		flex: 1;
+		border-bottom: 1px dotted var(--muted);
+		opacity: 0.6;
+	}
+	.n {
+		color: var(--muted);
+	}
+	.index a:hover,
+	.index a:hover .n {
+		color: var(--accent);
+	}
+	@media (max-width: 560px) {
+		.index {
+			columns: 1;
+		}
+	}
+</style>

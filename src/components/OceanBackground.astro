@@ -1,0 +1,457 @@
+---
+/**
+ * Full-screen animated "ocean horizon" background.
+ *
+ *  - Sky: vertical gradient. Dark theme = night with twinkling stars, a glowing moon and
+ *    occasional shooting stars. Light theme = calm day with a low sun and drifting light motes.
+ *  - Sea: five layered waves with depth (back layers paler and slower, front layers darker and
+ *    faster). Wave crests rise gently under the mouse pointer.
+ *  - Reflection: a shimmering column of light on the water below the moon / sun.
+ *
+ * Theme-aware, pauses while the tab is hidden, renders one still frame for visitors who prefer
+ * reduced motion, and falls back to a static CSS gradient without JavaScript.
+ */
+---
+
+<div class="bg" aria-hidden="true">
+	<canvas class="bg-canvas"></canvas>
+	<div class="bg-grain"></div>
+	<div class="bg-vignette"></div>
+</div>
+
+<style>
+	.bg {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		/* Large viewport height: unaffected by mobile URL bars showing/hiding. */
+		height: 100vh;
+		height: 100lvh;
+		z-index: -1;
+		pointer-events: none;
+		overflow: hidden;
+		/* Static fallback (no JS / before the first frame): sky over sea. */
+		background: linear-gradient(
+			to bottom,
+			var(--sky-top) 0%,
+			var(--sky-mid) 40%,
+			var(--sky-horizon) 60%,
+			var(--sea) 60%,
+			var(--sea-deep) 100%
+		);
+	}
+	canvas {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
+		transition: opacity 1s ease;
+	}
+	canvas.ready {
+		opacity: 1;
+	}
+	.bg-grain {
+		position: absolute;
+		inset: 0;
+		opacity: var(--grain-opacity);
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	}
+	.bg-vignette {
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(130% 100% at 50% 35%, transparent 60%, var(--vignette) 100%);
+	}
+</style>
+
+<script>
+	type Palette = {
+		sky: [string, string, string]; // top, middle, horizon
+		orb: { x: number; y: number; r: number; core: string; glow: string }; // x,y = fractions
+		waves: { color: string; alpha: number }[]; // back → front
+		crest: string; // "r,g,b"
+		crestAlpha: number;
+		glitter: string; // "r,g,b"
+		stars: boolean;
+		motes: boolean;
+	};
+
+	const PALETTES: Record<'light' | 'dark', Palette> = {
+		dark: {
+			sky: ['#020617', '#071a33', '#0f3b4a'],
+			orb: { x: 0.87, y: 0.2, r: 34, core: '#fef9e7', glow: '253,230,138' },
+			waves: [
+				{ color: '#0f4c5c', alpha: 0.6 },
+				{ color: '#0d3b52', alpha: 0.75 },
+				{ color: '#0a2d45', alpha: 0.85 },
+				{ color: '#072036', alpha: 0.92 },
+				{ color: '#041426', alpha: 0.97 },
+			],
+			crest: '125,211,252',
+			crestAlpha: 0.22,
+			glitter: '253,230,138',
+			stars: true,
+			motes: false,
+		},
+		light: {
+			sky: ['#a9d8f5', '#e4f3fc', '#ffe2bf'],
+			orb: { x: 0.86, y: 0.42, r: 44, core: '#fffbea', glow: '251,191,36' },
+			waves: [
+				{ color: '#8fd9cf', alpha: 0.7 },
+				{ color: '#62c3bb', alpha: 0.78 },
+				{ color: '#3ba9a3', alpha: 0.85 },
+				{ color: '#22908d', alpha: 0.92 },
+				{ color: '#137377', alpha: 0.97 },
+			],
+			crest: '255,255,255',
+			crestAlpha: 0.5,
+			glitter: '255,250,225',
+			stars: false,
+			motes: true,
+		},
+	};
+
+	// Wave layers, back → front. depth = position between horizon (0) and bottom (1).
+	const LAYERS = [
+		{ depth: 0.03, amp: 5, wl: 170, speed: 0.35, phase: 0.0 },
+		{ depth: 0.18, amp: 9, wl: 250, speed: -0.45, phase: 1.3 },
+		{ depth: 0.36, amp: 14, wl: 340, speed: 0.55, phase: 2.6 },
+		{ depth: 0.56, amp: 19, wl: 450, speed: -0.65, phase: 3.9 },
+		{ depth: 0.77, amp: 25, wl: 580, speed: 0.75, phase: 5.2 },
+	];
+	const STEP = 8; // px between wave sample points
+
+	const root = document.documentElement;
+	const container = document.querySelector<HTMLElement>('.bg')!;
+	const canvas = document.querySelector<HTMLCanvasElement>('.bg-canvas')!;
+	const ctx = canvas.getContext('2d')!;
+	const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+	let palette = PALETTES[root.dataset.theme === 'dark' ? 'dark' : 'light'];
+	let width = 0;
+	let height = 0;
+	let dpr = 1;
+	let horizon = 0;
+	let scale = 1;
+	let rafId = 0;
+	let lastTime = 0;
+	let clock = 0;
+	let nextShootingStar = 3;
+
+	const pointer = { x: 0, active: false, strength: 0 };
+
+	type Star = { x: number; y: number; r: number; base: number; tw: number; sp: number };
+	type Mote = { x: number; y: number; r: number; vx: number; vy: number; a: number; tw: number };
+	type Glint = { u: number; v: number; len: number; tw: number; sp: number };
+	type Shooting = { x: number; y: number; vx: number; vy: number; life: number; max: number; len: number };
+
+	let stars: Star[] = [];
+	let motes: Mote[] = [];
+	let glints: Glint[] = [];
+	let shooting: Shooting[] = [];
+
+	const rand = (a: number, b: number) => a + Math.random() * (b - a);
+
+	function seed() {
+		const skyArea = width * horizon;
+		stars = Array.from({ length: Math.min(260, Math.round(skyArea / 4200)) }, () => ({
+			x: Math.random() * width,
+			y: Math.pow(Math.random(), 1.4) * horizon * 0.97, // denser near the top
+			r: Math.random() < 0.08 ? rand(1.2, 1.8) : rand(0.4, 1.1),
+			base: rand(0.35, 0.9),
+			tw: rand(0, Math.PI * 2),
+			sp: rand(0.8, 2.6),
+		}));
+		motes = Array.from({ length: width < 640 ? 10 : 18 }, () => ({
+			x: Math.random() * width,
+			y: Math.random() * horizon,
+			r: rand(6, 34),
+			vx: rand(-6, 6),
+			vy: rand(-8, -2),
+			a: rand(0.06, 0.18),
+			tw: rand(0, Math.PI * 2),
+		}));
+		// Reflection glints: u = horizontal offset (-1..1), v = distance below horizon (0..1).
+		glints = Array.from({ length: width < 640 ? 45 : 80 }, () => ({
+			u: (Math.random() + Math.random() - 1) * 1, // triangular distribution, centered
+			v: Math.pow(Math.random(), 0.8),
+			len: rand(4, 16),
+			tw: rand(0, Math.PI * 2),
+			sp: rand(1.5, 4),
+		}));
+		shooting = [];
+	}
+
+	function resize(): boolean {
+		const w = container.clientWidth;
+		const h = container.clientHeight;
+		const ratio = Math.min(window.devicePixelRatio || 1, 2);
+		if (w === width && h === height && ratio === dpr) return false;
+		const widthChanged = w !== width;
+		width = w;
+		height = h;
+		dpr = ratio;
+		horizon = height * (width < height ? 0.66 : 0.6);
+		scale = Math.max(0.6, Math.min(1.3, height / 900));
+		canvas.width = Math.round(width * dpr);
+		canvas.height = Math.round(height * dpr);
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		if (widthChanged || stars.length === 0) seed();
+		return true;
+	}
+
+	function orbPos() {
+		const o = palette.orb;
+		return { x: width * o.x, y: horizon * o.y, r: o.r * Math.max(0.75, scale) };
+	}
+
+	// ---------- Sky ----------
+	function drawSky(t: number) {
+		const [top, mid, low] = palette.sky;
+		const g = ctx.createLinearGradient(0, 0, 0, horizon);
+		g.addColorStop(0, top);
+		g.addColorStop(0.6, mid);
+		g.addColorStop(1, low);
+		ctx.fillStyle = g;
+		ctx.fillRect(0, 0, width, horizon + 2);
+
+		if (palette.stars) {
+			for (const s of stars) {
+				const a = s.base * (0.55 + 0.45 * Math.sin(t * s.sp + s.tw));
+				ctx.fillStyle = `rgba(226,236,255,${a})`;
+				if (s.r > 1.15) {
+					ctx.beginPath();
+					ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+					ctx.fill();
+				} else {
+					ctx.fillRect(s.x, s.y, s.r * 1.6, s.r * 1.6);
+				}
+			}
+		}
+
+		if (palette.motes) {
+			for (const m of motes) {
+				const a = m.a * (0.7 + 0.3 * Math.sin(t * 0.6 + m.tw));
+				const g2 = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r);
+				g2.addColorStop(0, `rgba(255,255,255,${a})`);
+				g2.addColorStop(1, 'rgba(255,255,255,0)');
+				ctx.fillStyle = g2;
+				ctx.fillRect(m.x - m.r, m.y - m.r, m.r * 2, m.r * 2);
+			}
+		}
+
+		// Moon / sun with a breathing halo.
+		const o = orbPos();
+		const pulse = 1 + 0.04 * Math.sin(t * 0.5);
+		const halo = ctx.createRadialGradient(o.x, o.y, o.r * 0.6, o.x, o.y, o.r * 6 * pulse);
+		halo.addColorStop(0, `rgba(${palette.orb.glow},0.35)`);
+		halo.addColorStop(0.3, `rgba(${palette.orb.glow},0.12)`);
+		halo.addColorStop(1, `rgba(${palette.orb.glow},0)`);
+		ctx.fillStyle = halo;
+		ctx.fillRect(o.x - o.r * 7, o.y - o.r * 7, o.r * 14, o.r * 14);
+		const disc = ctx.createRadialGradient(o.x - o.r * 0.25, o.y - o.r * 0.25, 0, o.x, o.y, o.r);
+		disc.addColorStop(0, palette.orb.core);
+		disc.addColorStop(1, `rgba(${palette.orb.glow},0.85)`);
+		ctx.fillStyle = disc;
+		ctx.beginPath();
+		ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+		ctx.fill();
+
+		// Shooting stars (night only).
+		for (const s of shooting) {
+			const p = s.life / s.max;
+			const fade = p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85;
+			const speed = Math.hypot(s.vx, s.vy);
+			const tx = s.x - (s.vx / speed) * s.len;
+			const ty = s.y - (s.vy / speed) * s.len;
+			const g3 = ctx.createLinearGradient(s.x, s.y, tx, ty);
+			g3.addColorStop(0, `rgba(255,255,255,${0.9 * fade})`);
+			g3.addColorStop(1, 'rgba(255,255,255,0)');
+			ctx.strokeStyle = g3;
+			ctx.lineWidth = 1.6;
+			ctx.lineCap = 'round';
+			ctx.beginPath();
+			ctx.moveTo(s.x, s.y);
+			ctx.lineTo(tx, ty);
+			ctx.stroke();
+		}
+	}
+
+	// ---------- Sea ----------
+	function waveY(layer: (typeof LAYERS)[number], x: number, t: number, bump: number): number {
+		const base = horizon + (height - horizon) * layer.depth;
+		const amp = layer.amp * scale;
+		const k = (Math.PI * 2) / (layer.wl * scale);
+		const y =
+			Math.sin(x * k + t * layer.speed + layer.phase) * 0.65 +
+			Math.sin(x * k * 1.9 - t * layer.speed * 1.4 + layer.phase * 2) * 0.25 +
+			Math.sin(x * k * 0.45 + t * layer.speed * 0.6) * 0.1;
+		return base + y * amp - bump * amp * (0.6 + layer.depth);
+	}
+
+	function drawSea(t: number) {
+		// Water body behind the waves (fills the gap right below the horizon).
+		ctx.fillStyle = palette.waves[0].color;
+		ctx.globalAlpha = 0.9;
+		ctx.fillRect(0, horizon, width, height - horizon);
+		ctx.globalAlpha = 1;
+
+		const o = orbPos();
+		LAYERS.forEach((layer, i) => {
+			const { color, alpha } = palette.waves[i];
+			ctx.beginPath();
+			ctx.moveTo(0, height);
+			const pts: [number, number][] = [];
+			for (let x = 0; x <= width + STEP; x += STEP) {
+				const d = (x - pointer.x) / (220 * scale);
+				const bump = pointer.strength * Math.exp(-d * d);
+				const y = waveY(layer, x, t, bump);
+				pts.push([x, y]);
+				ctx.lineTo(x, y);
+			}
+			ctx.lineTo(width, height);
+			ctx.closePath();
+			ctx.globalAlpha = alpha;
+			ctx.fillStyle = color;
+			ctx.fill();
+			ctx.globalAlpha = 1;
+
+			// Crest highlight.
+			ctx.beginPath();
+			pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+			ctx.strokeStyle = `rgba(${palette.crest},${palette.crestAlpha * (1 - layer.depth * 0.5)})`;
+			ctx.lineWidth = 1.2;
+			ctx.stroke();
+
+			// Reflection glints sit on top of the two farthest layers.
+			if (i === 1) drawGlints(t, o.x);
+		});
+	}
+
+	function drawGlints(t: number, cx: number) {
+		const seaH = height - horizon;
+		ctx.lineCap = 'round';
+		for (const g of glints) {
+			const y = horizon + 4 + g.v * seaH * 0.9;
+			const spread = 14 + g.v * seaH * 0.45; // column widens toward the viewer
+			const x = cx + g.u * spread + Math.sin(t * 0.8 + g.tw) * 3;
+			const a = Math.min(1, Math.max(0, Math.sin(t * g.sp + g.tw)) * (1 - g.v * 0.5) * 1.1);
+			if (a < 0.03) continue;
+			const len = g.len * (0.6 + g.v);
+			ctx.strokeStyle = `rgba(${palette.glitter},${a})`;
+			ctx.lineWidth = 1 + g.v * 1.5;
+			ctx.beginPath();
+			ctx.moveTo(x - len / 2, y);
+			ctx.lineTo(x + len / 2, y);
+			ctx.stroke();
+		}
+	}
+
+	function render() {
+		drawSky(clock);
+		drawSea(clock);
+	}
+
+	// ---------- Animation ----------
+	function step(dt: number) {
+		// Ease the pointer influence in and out.
+		const target = pointer.active ? 1 : 0;
+		pointer.strength += (target - pointer.strength) * Math.min(1, dt * 3);
+
+		if (palette.motes) {
+			for (const m of motes) {
+				m.x += m.vx * dt;
+				m.y += m.vy * dt;
+				if (m.y < -m.r) {
+					m.y = horizon + m.r;
+					m.x = Math.random() * width;
+				}
+				if (m.x < -m.r) m.x = width + m.r;
+				else if (m.x > width + m.r) m.x = -m.r;
+			}
+		}
+
+		if (palette.stars) {
+			nextShootingStar -= dt;
+			if (nextShootingStar <= 0) {
+				nextShootingStar = rand(3.5, 8);
+				const dir = Math.random() < 0.5 ? -1 : 1;
+				const angle = rand(0.35, 0.6); // radians below horizontal
+				const speed = rand(650, 950) * Math.max(0.7, scale);
+				shooting.push({
+					x: dir > 0 ? rand(0, width * 0.6) : rand(width * 0.4, width),
+					y: rand(0, horizon * 0.35),
+					vx: Math.cos(angle) * speed * dir,
+					vy: Math.sin(angle) * speed,
+					life: 0,
+					max: rand(0.7, 1.1),
+					len: rand(110, 200) * Math.max(0.7, scale),
+				});
+			}
+		}
+		for (const s of shooting) {
+			s.life += dt;
+			s.x += s.vx * dt;
+			s.y += s.vy * dt;
+		}
+		shooting = shooting.filter((s) => s.life < s.max && s.y < horizon);
+	}
+
+	function frame(now: number) {
+		const dt = Math.min((now - lastTime) / 1000, 0.05);
+		lastTime = now;
+		clock += dt;
+		step(dt);
+		render();
+		rafId = requestAnimationFrame(frame);
+	}
+
+	function start() {
+		if (rafId || reducedMotion.matches || document.hidden) return;
+		lastTime = performance.now();
+		rafId = requestAnimationFrame(frame);
+	}
+
+	function stop() {
+		cancelAnimationFrame(rafId);
+		rafId = 0;
+	}
+
+	let resizeTimer: number | undefined;
+	window.addEventListener('resize', () => {
+		clearTimeout(resizeTimer);
+		resizeTimer = window.setTimeout(() => {
+			if (resize()) render();
+		}, 150);
+	});
+
+	window.addEventListener(
+		'pointermove',
+		(e) => {
+			pointer.x = e.clientX;
+			pointer.active = e.pointerType === 'mouse';
+		},
+		{ passive: true },
+	);
+	root.addEventListener('pointerleave', () => (pointer.active = false));
+	document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+	reducedMotion.addEventListener('change', () => {
+		if (reducedMotion.matches) {
+			stop();
+			render();
+		} else start();
+	});
+
+	new MutationObserver(() => {
+		palette = PALETTES[root.dataset.theme === 'dark' ? 'dark' : 'light'];
+		shooting = [];
+		if (!rafId) render();
+	}).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+
+	resize();
+	clock = rand(10, 60);
+	render();
+	canvas.classList.add('ready');
+	start();
+</script>

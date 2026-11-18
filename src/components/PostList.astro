@@ -1,0 +1,107 @@
+---
+import { type Post, postUrl, readingTime, tagUrl } from '../utils/posts';
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+	posts: Post[];
+	/** Show "MM-DD" instead of the full date (when posts are already grouped by year). */
+	shortDates?: boolean;
+}
+
+const { posts, shortDates = false } = Astro.props;
+---
+
+<ol class:list={['rows', { short: shortDates }]}>
+	{
+		posts.map((post) => (
+			<li>
+				<article class="row">
+					<p class="date mono">
+						<FormattedDate date={post.data.pubDate} short={shortDates} />
+					</p>
+					<div class="body">
+						<h3 class="title">
+							<a href={postUrl(post)}>{post.data.title}</a>
+							{post.data.draft && <span class="draft mono">draft</span>}
+						</h3>
+						<p class="desc">{post.data.description}</p>
+						<p class="meta">
+							<span class="mono muted">{readingTime(post.body)} min</span>
+							{post.data.tags.map((tag) => (
+								<a class="tag" href={tagUrl(tag)}>
+									{tag}
+								</a>
+							))}
+						</p>
+					</div>
+				</article>
+			</li>
+		))
+	}
+</ol>
+
+<style>
+	.rows {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.row {
+		display: grid;
+		grid-template-columns: 6.5rem 1fr;
+		gap: 1.25rem;
+		padding: 1.1rem 0;
+		border-top: 1px solid var(--border);
+	}
+	.rows.short .row {
+		grid-template-columns: 3.25rem 1fr;
+	}
+	li:first-child .row {
+		border-top: 0;
+		padding-top: 0;
+	}
+	.date {
+		margin: 0.3rem 0 0;
+		color: var(--muted);
+	}
+	.title {
+		margin: 0 0 0.25rem;
+		font-size: 1.25rem;
+	}
+	.title a {
+		color: var(--fg);
+		text-decoration: none;
+		background: linear-gradient(var(--accent), var(--accent)) 0 100% / 0 1px no-repeat;
+		transition: background-size 0.25s ease, color 0.2s ease;
+	}
+	.title a:hover {
+		color: var(--accent);
+		background-size: 100% 1px;
+	}
+	.draft {
+		margin-left: 0.5rem;
+		padding: 0 0.35rem;
+		border: 1px solid var(--accent-2);
+		border-radius: 2px;
+		color: var(--accent-2);
+		font-size: 0.65rem;
+		vertical-align: middle;
+	}
+	.desc {
+		margin: 0 0 0.4rem;
+		color: var(--fg-soft);
+		font-size: 0.95rem;
+	}
+	.meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem 0.8rem;
+		margin: 0;
+	}
+	@media (max-width: 520px) {
+		.row {
+			grid-template-columns: 1fr;
+			gap: 0.2rem;
+		}
+	}
+</style>

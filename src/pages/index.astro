@@ -1,0 +1,240 @@
+---
+import Icon from '../components/Icon.astro';
+import PostList from '../components/PostList.astro';
+import { SITE, SOCIAL_LINKS } from '../config';
+import { PROFILE } from '../data/profile';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getPosts } from '../utils/posts';
+
+const recent = (await getPosts()).slice(0, SITE.homeRecentPosts);
+---
+
+<BaseLayout bare description={PROFILE.intro[0]}>
+	<div class="home">
+		<section class="hero">
+			<p class="eyebrow rise" style="--d: 0">~/ hello, world</p>
+			<h1 class="display rise" style="--d: 1">
+				I'm <em class="gradient-text">{PROFILE.name}</em>.
+			</h1>
+			<p class="lede rise" style="--d: 2">{PROFILE.role}</p>
+			{
+				PROFILE.location && (
+					<p class="location mono rise" style="--d: 2">
+						<Icon name="pin" size={14} /> {PROFILE.location}
+					</p>
+				)
+			}
+			{
+				PROFILE.intro.length > 0 && (
+					<div class="intro rise" style="--d: 3">
+						{PROFILE.intro.map((p) => (
+							<p>{p}</p>
+						))}
+					</div>
+				)
+			}
+			<div class="cta rise" style="--d: 4">
+				<a class="btn" href="/writing/">Read the writing <Icon name="arrow" size={16} /></a>
+				<a class="btn ghost" href="/about/">About me</a>
+				{
+					SOCIAL_LINKS.map((link) => (
+						<a class="btn ghost icon-only" href={link.href} aria-label={link.label} title={link.label}>
+							<Icon name={link.icon} size={18} />
+						</a>
+					))
+				}
+			</div>
+		</section>
+
+		<section class="sheet block" aria-labelledby="interests-title">
+			<header class="block-head">
+				<p class="eyebrow">01 — Interests</p>
+				<h2 id="interests-title">Things I enjoy</h2>
+			</header>
+			<ol class="interests">
+				{
+					PROFILE.hobbies.map((h, i) => (
+						<li>
+							<span class="idx mono">{String(i + 1).padStart(2, '0')}</span>
+							<span class="ic">
+								<Icon name={h.icon} size={20} />
+							</span>
+							<span class="txt">
+								<strong>{h.title}</strong>
+								<span>{h.text}</span>
+							</span>
+						</li>
+					))
+				}
+			</ol>
+		</section>
+
+		{
+			recent.length > 0 && (
+				<section class="sheet block" aria-labelledby="writing-title">
+					<header class="block-head">
+						<p class="eyebrow">02 — Writing</p>
+						<h2 id="writing-title">Latest notes</h2>
+						<a class="more mono" href="/writing/">
+							all posts →
+						</a>
+					</header>
+					<PostList posts={recent} />
+				</section>
+			)
+		}
+	</div>
+</BaseLayout>
+
+<style>
+	.home {
+		max-width: 58rem;
+	}
+
+	/* ---------- Hero ---------- */
+	.hero {
+		padding: clamp(2rem, 12vh, 8rem) 0 clamp(3rem, 9vh, 5.5rem);
+	}
+	.display {
+		margin: 0;
+		font-size: clamp(2.8rem, 7.5vw, 5.75rem);
+		font-weight: 600;
+		line-height: 1.02;
+		letter-spacing: -0.025em;
+		overflow-wrap: anywhere;
+	}
+	.display em {
+		font-style: italic;
+		font-weight: 500;
+		padding-right: 0.08em; /* keep italic overhang inside the gradient clip */
+	}
+	.lede {
+		margin: 1.1rem 0 0;
+		max-width: 36rem;
+		font-family: var(--font-serif);
+		font-style: italic;
+		font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+		color: var(--fg-soft);
+	}
+	.location {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin: 0.8rem 0 0;
+		color: var(--muted);
+	}
+	.intro {
+		max-width: 36rem;
+		margin-top: 1.4rem;
+		padding-left: 1.1rem;
+		border-left: 2px solid var(--accent);
+		color: var(--fg-soft);
+		font-size: 1.05rem;
+	}
+	.intro p {
+		margin: 0 0 0.6rem;
+	}
+	.cta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 2.2rem;
+	}
+	.icon-only {
+		padding: 0.7rem 0.8rem;
+	}
+
+	/* ---------- Content blocks ---------- */
+	.block {
+		margin-bottom: 1.75rem;
+	}
+	.block-head {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		align-items: end;
+		margin-bottom: 1.5rem;
+	}
+	.block-head .eyebrow {
+		grid-column: 1 / -1;
+	}
+	.block-head h2 {
+		margin: 0;
+		font-size: 1.9rem;
+	}
+	.more {
+		text-decoration: none;
+	}
+
+	/* Interests as a numbered list (not cards). */
+	.interests {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		column-gap: 2.5rem;
+	}
+	.interests li {
+		display: grid;
+		grid-template-columns: 2rem 2.4rem 1fr;
+		align-items: start;
+		gap: 0.75rem;
+		padding: 1.05rem 0.5rem;
+		border-top: 1px solid var(--border);
+		transition: background-color 0.2s ease, transform 0.2s ease;
+	}
+	.interests li:hover {
+		background: var(--accent-soft);
+		transform: translateX(4px);
+	}
+	.idx {
+		padding-top: 0.55rem;
+		color: var(--accent);
+	}
+	.ic {
+		display: grid;
+		place-items: center;
+		width: 2.4rem;
+		height: 2.4rem;
+		border-radius: var(--radius);
+		color: var(--accent);
+		border: 1px solid var(--border);
+		background: var(--surface-strong);
+	}
+	.txt {
+		display: flex;
+		flex-direction: column;
+	}
+	.txt strong {
+		font: 600 1.15rem var(--font-serif);
+		color: var(--fg);
+	}
+	.txt span {
+		font-size: 0.93rem;
+		color: var(--fg-soft);
+	}
+
+	/* ---------- Motion ---------- */
+	.rise {
+		animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+		animation-delay: calc(var(--d) * 110ms);
+	}
+	@keyframes rise {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+			filter: blur(4px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+			filter: none;
+		}
+	}
+
+	@media (max-width: 760px) {
+		.interests {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

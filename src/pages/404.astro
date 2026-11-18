@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Lost at sea" noindex>
+	<p class="eyebrow">Error 404</p>
+	<h1 class="title">Lost at sea.</h1>
+	<p class="lede">
+		This page drifted off — or never existed. Let's get you back to shore.
+	</p>
+	<p class="links">
+		<a class="btn" href="/">Back to home</a>
+		<a class="btn ghost" href="/writing/">Browse writing</a>
+		<a class="btn ghost" href="/search/">Search</a>
+	</p>
+</BaseLayout>
+
+<style>
+	.title {
+		margin: 0;
+		font-size: clamp(2.6rem, 8vw, 4.5rem);
+		font-style: italic;
+		letter-spacing: -0.02em;
+	}
+	.lede {
+		margin: 1rem 0 2rem;
+		font-family: var(--font-serif);
+		font-size: 1.2rem;
+		color: var(--fg-soft);
+	}
+	.links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin: 0;
+	}
+</style>

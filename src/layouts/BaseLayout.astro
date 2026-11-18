@@ -1,0 +1,67 @@
+---
+import BaseHead, { type Props as HeadProps } from '../components/BaseHead.astro';
+import OceanBackground from '../components/OceanBackground.astro';
+import Sidebar from '../components/Sidebar.astro';
+import { SITE } from '../config';
+
+type Props = HeadProps & {
+	/** Render the page directly on the background instead of inside a paper sheet. */
+	bare?: boolean;
+};
+
+const { bare = false, ...head } = Astro.props;
+---
+
+<!doctype html>
+<html lang={SITE.lang}>
+	<head>
+		<BaseHead {...head} />
+		<slot name="head" />
+	</head>
+	<body>
+		<OceanBackground />
+		<a class="skip-link" href="#content">Skip to content</a>
+		<Sidebar />
+		<main id="content" class:list={{ bare }}>
+			{
+				bare ? (
+					<slot />
+				) : (
+					<div class="sheet page">
+						<slot />
+					</div>
+				)
+			}
+		</main>
+	</body>
+</html>
+
+<style>
+	main {
+		margin-left: var(--sidebar);
+		padding: 3.5rem clamp(1.5rem, 5vw, 4.5rem) 5rem;
+	}
+	.page {
+		max-width: var(--measure);
+	}
+	@media (max-width: 900px) {
+		main {
+			margin-left: 0;
+			padding: 1.5rem 1rem 3.5rem;
+		}
+	}
+
+	.skip-link {
+		position: fixed;
+		top: 0.5rem;
+		left: 0.5rem;
+		z-index: 100;
+		padding: 0.5rem 1rem;
+		background: var(--bg);
+		border: 1px solid var(--accent);
+		transform: translateY(-200%);
+	}
+	.skip-link:focus {
+		transform: none;
+	}
+</style>

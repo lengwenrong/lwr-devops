@@ -1,0 +1,13 @@
+---
+interface Props {
+	date: Date;
+	/** Show only month-day (used inside year groups). */
+	short?: boolean;
+}
+
+const { date, short = false } = Astro.props;
+// Frontmatter dates are UTC midnight; ISO formatting keeps the calendar day stable.
+const iso = date.toISOString().slice(0, 10);
+---
+
+<time datetime={date.toISOString()}>{short ? iso.slice(5) : iso}</time>

@@ -1,0 +1,73 @@
+---
+import PostList from '../../components/PostList.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPosts, type Post } from '../../utils/posts';
+
+// One page with every post, grouped by year (newest first).
+const posts = await getPosts();
+const byYear = new Map<number, Post[]>();
+for (const post of posts) {
+	const year = post.data.pubDate.getUTCFullYear();
+	byYear.set(year, [...(byYear.get(year) ?? []), post]);
+}
+---
+
+<BaseLayout title="Writing" description="Notes, essays and how-tos, grouped by year.">
+	<header class="page-head">
+		<p class="eyebrow">02 — Writing</p>
+		<h1 class="page-title">Writing</h1>
+		<p class="page-lede">
+			{
+				posts.length > 0
+					? `${posts.length} ${posts.length === 1 ? 'piece' : 'pieces'} so far — notes, essays and how-tos.`
+					: 'Notes, essays and how-tos.'
+			}
+		</p>
+	</header>
+
+	{posts.length === 0 && <p class="empty">Nothing here yet — the first post is on its way.</p>}
+
+	{
+		[...byYear].map(([year, list]) => (
+			<section class="year">
+				<h2 class="year-num">
+					{year}
+					<span class="count mono">{list.length}</span>
+				</h2>
+				<PostList posts={list} shortDates />
+			</section>
+		))
+	}
+</BaseLayout>
+
+<style>
+	.year {
+		display: grid;
+		grid-template-columns: 6rem minmax(0, 1fr);
+		gap: 1.5rem;
+		padding: 1.5rem 0;
+		border-top: 1px solid var(--border);
+	}
+	.year:first-of-type {
+		border-top: 0;
+		padding-top: 0;
+	}
+	.year-num {
+		margin: 0;
+		font-size: 1.6rem;
+		color: var(--accent);
+	}
+	.count {
+		display: block;
+		margin-top: 0.2rem;
+		font-size: 0.7rem;
+		font-weight: 400;
+		color: var(--muted);
+	}
+	@media (max-width: 640px) {
+		.year {
+			grid-template-columns: 1fr;
+			gap: 0.75rem;
+		}
+	}
+</style>

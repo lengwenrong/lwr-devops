@@ -9,7 +9,7 @@ export const PROFILE = {
 	/** Your display name — change SITE.author in src/config.ts. */
 	name: SITE.author,
 	/** One short line under your name. */
-	role: 'I am a third-year computer science student and passionate about various development tools.',
+	role: 'I am a third-year computer science student.',
 	/** Optional, e.g. 'Berlin, Germany'. Leave empty to hide. */
 	location: '',
 	/**

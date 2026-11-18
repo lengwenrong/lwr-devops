@@ -1,9 +1,5 @@
 # lwr-devops — Personal Blog
 
-A fast, static personal website and blog built with [Astro](https://astro.build). The home
-page is a personal introduction with hobby cards on top of an animated ocean-horizon background; the blog
-section turns Markdown files into articles. Everything is pre-rendered at build time into plain HTML/CSS/JS in `dist/`, which is served by Nginx.
-
 ## Table of contents
 
 - [Project overview](#project-overview)
@@ -156,14 +152,6 @@ npm ci               # clean install from package-lock.json
 npm run package      # → release/blog-dist-YYYYMMDD-HHMMSS.tar.gz
 ```
 
-`npm run package` type-checks, builds into `dist/`, and archives the **contents** of `dist/`
-(`index.html` at the top level of the tarball). You can also just run `npm run build` and copy
-`dist/` with `rsync`:
-
-```bash
-rsync -avz --delete dist/ user@server:/var/www/blog/
-```
-
 ### 2. Upload and extract
 
 ```bash
@@ -197,6 +185,3 @@ What the config does:
 | Compression    | gzip for HTML, CSS, JS, JSON, XML, SVG                                            |
 | Security       | `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `server_tokens off`, dotfiles denied |
 | Content types  | `rss.xml` served as `application/rss+xml`                                         |
-
-All response headers are set once at `server` level (cache policy comes from a `map`). Don't put
-`add_header` inside a `location` block — Nginx would then drop the server-level headers there.

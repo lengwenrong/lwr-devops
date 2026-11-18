@@ -3,19 +3,27 @@ import Icon from '../components/Icon.astro';
 import { SOCIAL_LINKS } from '../config';
 import { PROFILE } from '../data/profile';
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+const hasBio = PROFILE.about.length > 0;
 ---
 
-<BaseLayout title="About" description={PROFILE.about[0]}>
+<BaseLayout title="About" description={PROFILE.about[0] ?? PROFILE.role}>
 	<header class="page-head">
 		<p class="eyebrow">04 — About</p>
 		<h1 class="page-title">About me</h1>
 		<p class="page-lede">{PROFILE.role}</p>
 	</header>
 
-	<div class="about">
-		<div class="prose bio">
-			{PROFILE.about.map((p) => <p>{p}</p>)}
-		</div>
+	<div class:list={['about', { 'no-bio': !hasBio }]}>
+		{
+			hasBio && (
+				<div class="prose bio">
+					{PROFILE.about.map((p) => (
+						<p>{p}</p>
+					))}
+				</div>
+			)
+		}
 
 		<aside class="side">
 			<h2 class="eyebrow">Interests</h2>
@@ -100,6 +108,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 	}
 	.links a:hover {
 		color: var(--accent);
+	}
+	/* Without a bio: one column, interests spread across the width. */
+	.about.no-bio {
+		grid-template-columns: 1fr;
+	}
+	.no-bio .side {
+		padding: 0;
+		border: 0;
+	}
+	.no-bio .interests {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+		column-gap: 1.5rem;
 	}
 	@media (max-width: 760px) {
 		.about {

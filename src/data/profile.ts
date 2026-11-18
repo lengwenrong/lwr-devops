@@ -21,11 +21,8 @@ export const PROFILE = {
 	/** Short introduction on the home page (1–2 sentences each). Leave empty to hide the intro card. */
 	intro: [] as string[],
 
-	/** Longer bio for the About page. */
-	about: [
-		'I work on infrastructure and developer tooling: CI/CD, Kubernetes, Linux, and the glue in between. I enjoy turning messy, manual processes into something boring and reliable.',
-		'Outside of work you will usually find me with a camera, a book, or a pair of hiking boots. I started this site to keep notes on what I learn and to share the occasional thing that might help someone else.',
-	],
+	/** Longer bio for the About page (one string per paragraph). Leave empty to hide it. */
+	about: [] as string[],
 
 	/** Hobby cards. Icons: code, camera, book, music, mountain, gamepad, coffee, plane. */
 	hobbies: [
